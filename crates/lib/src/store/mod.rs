@@ -49,6 +49,13 @@ pub const COMPOSEFS_MODE: Mode = Mode::from_raw_mode(0o700);
 /// system root
 pub(crate) const BOOTC_ROOT: &str = "ostree/bootc";
 
+/// The path for the reboot-required file, relative to the system
+/// root
+pub(crate) const REBOOT_REQUIRED: &str = "run/reboot-required";
+
+/// Reboot required message that will appear in /run/reboot-required
+pub(crate) const REBOOT_REQUIRED_MESSAGE: &[u8] = b"Reboot required to complete bootc operation";
+
 /// A reference to a physical filesystem root, plus
 /// accessors for the different types of container storage.
 pub(crate) struct Storage {
@@ -174,5 +181,19 @@ impl Storage {
         sysroot_dir
             .update_timestamps(std::path::Path::new(BOOTC_ROOT))
             .context("update_timestamps")
+    }
+
+    #[context("Updating the reboot-required file")]
+    pub(crate) fn update_reboot_file(&self) -> Result<()> {
+        let sysroot_dir =
+            crate::utils::sysroot_dir(&self.ostree).context("Reopen sysroot directory")?;
+
+        sysroot_dir
+            .write(
+                std::path::Path::new(REBOOT_REQUIRED),
+                REBOOT_REQUIRED_MESSAGE,
+            )
+            .context("Bootc reboot required")
+            .map_err(Into::into)
     }
 }
